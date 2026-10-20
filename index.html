@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>XO · KL Seat View</title>
+<style>
+:root{--bg:#0d0f13;--panel:rgba(16,18,23,.86);--line:rgba(255,255,255,.1);--red:#e8112d;--red2:#ff4d62;--text:#eef0f3;--mute:#8d939e;--btn:#1b1e25;--btnl:#2c313b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.45 "Helvetica Neue",Arial,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#cv:active{cursor:grabbing}
+header{position:fixed;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;gap:14px;pointer-events:none;background:linear-gradient(#0d0f13cc,transparent)}
+.logo{font-weight:900;font-size:26px;letter-spacing:-2px;color:var(--red)}
+header h1{margin:0;font-size:12px;letter-spacing:.28em;text-transform:uppercase;font-weight:700}
+header h1 small{display:block;color:var(--mute);letter-spacing:.18em;font-weight:500;margin-top:2px}
+#panel{position:fixed;left:14px;top:70px;bottom:14px;width:318px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:6px;overflow:auto;padding:16px}
+h2{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px;font-weight:700}
+h2:first-child{margin-top:0}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button,select,input{font:inherit;color:var(--text)}
+button{flex:1;min-width:0;padding:9px 6px;background:var(--btn);border:1px solid var(--btnl);border-radius:3px;cursor:pointer;text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;font-weight:700;transition:.15s}
+button:hover{border-color:#4a515e}
+button.on{background:var(--red);border-color:var(--red);color:#fff}
+select,input[type=number]{width:100%;padding:9px;background:var(--btn);border:1px solid var(--btnl);border-radius:3px}
+input[type=range]{width:100%;accent-color:var(--red)}
+label.s{display:flex;justify-content:space-between;color:var(--mute);margin:8px 0 2px;font-size:11px;letter-spacing:.06em}
+label.s b{color:var(--text)}
+.chip{display:inline-block;padding:2px 7px;border:1px solid;font-size:10px;letter-spacing:.18em;text-transform:uppercase;margin-right:6px;border-radius:2px}
+#legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:8px;color:var(--mute);font-size:10.5px}
+#legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+#info{margin-top:10px;padding:10px;border-left:2px solid var(--red);background:var(--btn);color:var(--mute);font-size:12px}
+#info b{color:var(--text)}
+.dist{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
+.dist div{background:#12141a;padding:7px 8px;border-radius:3px}
+.dist span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.dist b{display:block;font-size:20px;line-height:1.2}
+.dist i{display:block;font-style:normal;font-size:10.5px}
+.v{margin-top:4px}
+.note{color:var(--mute);font-size:10.5px;margin-top:16px}
+#toggle{display:none}
+#modal[hidden]{display:none}#modal{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:20px;z-index:9}
+#modal .box{max-width:440px;border:1px solid var(--line);background:#14161c;padding:28px;border-radius:6px}
+#modal .logo{font-size:44px}
+#modal h3{margin:6px 0 10px;letter-spacing:.25em;text-transform:uppercase;font-size:13px}
+#modal p{color:var(--mute);margin:0 0 18px}
+#modal button{background:var(--red);border-color:var(--red);color:#fff;padding:12px;width:100%;flex:none}
+#hud{position:fixed;right:16px;bottom:16px;text-align:right;color:var(--mute);font-size:11px;letter-spacing:.1em;pointer-events:none;text-transform:uppercase}
+#hud b{color:var(--text)}
+@media(max-width:760px){
+ #panel{left:0;right:0;top:auto;bottom:0;width:auto;max-height:46vh;border-radius:12px 12px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+ #panel.min{max-height:54px;overflow:hidden}
+ #toggle{display:block;width:100%;flex:none;margin-bottom:10px}
+ #hud{bottom:auto;top:62px;right:14px}
+}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<header><div class="logo">XO</div><h1>The Weeknd · Kuala Lumpur<small>Seat view simulator · 4 &amp; 5 Nov 2026 · TM Stadium Nasional</small></h1></header>
+
+<aside id="panel">
+ <button id="toggle">Seat picker ▾</button>
+ <h2>Where</h2>
+ <div class="row" id="tiers"></div>
+ <div id="legend"></div>
+ <label class="s"><span id="secLbl">Section</span></label>
+ <select id="sec"></select>
+ <label class="s"><span>Row</span><b id="rowV"></b></label>
+ <input type="range" id="row" min="1" value="8">
+ <label class="s"><span>Seat</span><b id="seatV"></b></label>
+ <input type="range" id="seat" min="1" max="18" value="9">
+ <div id="info"></div>
+
+ <h2>You</h2>
+ <div class="row"><input type="number" id="height" value="170" min="120" max="220" style="flex:1.4"><button id="sit" class="on">Sit</button><button id="stand">Stand</button></div>
+ <p class="note" style="margin-top:6px">Height in cm. The crowd around you sits or stands with you.</p>
+
+ <h2>Camera</h2>
+ <div class="row" id="modes"></div>
+ <div class="row" id="zooms" style="margin-top:6px"></div>
+ <p class="note" id="zoomNote" style="margin-top:6px">1× matches a phone's main camera. 0.5× is closer to your full field of vision.</p>
+
+ <h2>Lighting</h2>
+ <div class="row" id="lighting"></div>
+
+ <h2>Show</h2>
+ <div class="row" id="tg"></div>
+ <p class="note">Fan-made, unofficial. Stadium dimensions, the stage and zones are approximations, so treat distances as estimates and not exact figures. Check the official ticketing page for the actual seating plan and prices.</p>
+</aside>
+<div id="hud">Drag to look · Scroll / pinch to zoom<br><b id="hudMode"></b></div>
+
+<div id="modal"><div class="box">
+ <div class="logo">XO</div>
+ <h3>After Hours Til Dawn · KL</h3>
+ <p>Preview roughly what your seat could look like at TM Stadium Nasional, Bukit Jalil. This is an unofficial fan project. Sections, heights and the stage are estimates, so the real view will differ.</p>
+ <button id="go">Got it, continue</button>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+// Units are metres. Bowl is an ellipse with the long axis on z; the stage sits at the -z end.
+// Inner edge ~104 x 184 m (football pitch + running track), outer roof line ~240 x 320 m.
+const SX=52,SZ=92,SEG=4,NSEC=24,GAP=.003;
+const STAGE_FRONT=-70,DECK=2.4,BSTAGE_Z=-14,B_H=1.6;
+const TARGET=new THREE.Vector3(0,6,STAGE_FRONT-4);
+const TIERS={
+ lower:{name:'Lower',base:100,rows:30,r0:4,h0:1.2,d:.8,hs:.38},
+ mid:{name:'Middle',base:200,rows:14,r0:25,h0:16,d:.8,hs:.5},
+ upper:{name:'Upper',base:300,rows:32,r0:37,h0:25,d:.8,hs:.58}
+};
+const ORDER=['lower','mid','upper'];
+ORDER.forEach((t,k)=>{const T=TIERS[t],N=TIERS[ORDER[k+1]];T.top=N?N.h0-2.5:T.h0+T.rows*T.hs+3});
+const ZONES={A:'#e0a943',B:'#df7357',C:'#4fb0a2',D:'#5a88d6',E:'#9a7bd0'};
+const BLOCKS=[];
+[[-31,10],[-14,20],[14,20],[31,10]].forEach(([cx,w])=>BLOCKS.push({cx,w,cz:-52,d:24}));
+[[-36,16],[-17,18],[17,18],[36,16]].forEach(([cx,w])=>BLOCKS.push({cx,w,cz:-18,d:40}));
+BLOCKS.forEach((b,i)=>b.name='Pit '+'ABCDEFGH'[i]);
+const PERF_MAIN=new THREE.Vector3(0,DECK+1.6,STAGE_FRONT-3),PERF_B=new THREE.Vector3(0,B_H+1.6,BSTAGE_Z);
+const secAngles=i=>{const w=2*Math.PI/NSEC;return[i*w+GAP,(i+1)*w-GAP]};
+const delta=i=>Math.abs((((i+.5)*15+270)%360)-180);
+const blocked=i=>delta(i)<20;
+const zoneOf=(t,i)=>{const d=delta(i);return t==='lower'?(d<=60?'A':'B'):t==='mid'?(d<=75?'C':'D'):'E'};
+const P=(th,r)=>[(SX+r)*Math.cos(th),(SZ+r)*Math.sin(th)];
+const rowR=(T,row)=>T.r0+(row-1)*T.d+T.d*.55;
+const rowH=(T,row)=>T.h0+(row-1)*T.hs;
+function seatsIn(t,i,row){
+ const [a,b]=secAngles(i),r=rowR(TIERS[t],row);let len=0;
+ for(let j=0;j<SEG;j++){const [x1,z1]=P(a+(b-a)*j/SEG,r),[x2,z2]=P(a+(b-a)*(j+1)/SEG,r);len+=Math.hypot(x2-x1,z2-z1)}
+ return Math.round(len/.5);
+}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+const S={tier:'lower',sec:0,row:8,seat:9,height:170,sit:true,mode:'overview',zoom:1,light:'house',
+ show:{lights:true,sticks:true,crowd:true,labels:true,perf:true}};
+
+// ---------- scene ----------
+const cv=document.getElementById('cv');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x1f283b,450,2600);
+const camera=new THREE.PerspectiveCamera(50,1,.1,7000);
+camera.rotation.order='YXZ';
+const hemi=new THREE.HemisphereLight(0xdfe6f5,0x4a4c52,1);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,.5);sun.position.set(120,300,80);scene.add(sun);
+const wash=new THREE.PointLight(0xfff1e0,.6,160);wash.position.set(0,26,STAGE_FRONT+12);scene.add(wash);
+const stageLight=new THREE.PointLight(0xff2a3d,.4,120);stageLight.position.set(0,18,STAGE_FRONT-6);scene.add(stageLight);
+const bLight=new THREE.PointLight(0xfff4e0,.3,50);bLight.position.set(0,14,BSTAGE_Z);scene.add(bLight);
+
+// sky dome
+const sky=new THREE.Mesh(new THREE.SphereGeometry(3000,32,16),new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));
+sky.geometry.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(sky.geometry.attributes.position.count*3),3));
+sky.renderOrder=-1;scene.add(sky);
+function setSky(top,hor){
+ const p=sky.geometry.attributes.position,c=sky.geometry.attributes.color,a=new THREE.Color(top),b=new THREE.Color(hor),t=new THREE.Color();
+ for(let k=0;k<p.count;k++){t.copy(b).lerp(a,Math.min(1,Math.max(0,p.getY(k)/1400)));c.setXYZ(k,t.r,t.g,t.b)}
+ c.needsUpdate=true;
+}
+
+// ground + field
+const flat=(geo,color,y,extra)=>{const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial(Object.assign({color},extra)));m.rotation.x=-Math.PI/2;m.position.y=y;scene.add(m);return m};
+flat(new THREE.PlaneGeometry(6000,6000),0x1b1d20,-.05);
+flat(new THREE.CircleGeometry(1,96),0x5b3a32,0).scale.set(SX+4,SZ+4,1);
+flat(new THREE.PlaneGeometry(68,105),0x2a4527,.02);
+{// floor covering over the standing area, clipped to the bowl
+ const sh=new THREE.Shape(),half=z=>Math.min(46,(SX-1)*Math.sqrt(Math.max(0,1-(z/(SZ-1))**2))),pts=[];
+ for(let z=-68;z<=6;z+=2)pts.push([half(z),z]);
+ pts.forEach(([x,z],k)=>k?sh.lineTo(x,-z):sh.moveTo(x,-z));
+ pts.slice().reverse().forEach(([x,z])=>sh.lineTo(-x,-z));
+ flat(new THREE.ShapeGeometry(sh),0x4b5058,.03);
+}
+
+// ---------- seating ----------
+const SEAT=new THREE.Color('#3f4b60'),CONC=new THREE.Color('#8b8f97'),TARP=new THREE.Color('#1f2226'),WALL=new THREE.Color('#62666d');
+const secMesh={lower:[],mid:[],upper:[]};
+const labelGroup=new THREE.Group();scene.add(labelGroup);
+function labelSprite(txt){
+ const c=document.createElement('canvas');c.width=128;c.height=64;const g=c.getContext('2d');
+ g.fillStyle='rgba(16,18,23,.85)';g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=3;
+ g.beginPath();g.rect(6,10,116,44);g.fill();g.stroke();
+ g.fillStyle='#fff';g.font='bold 30px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,64,33);
+ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthTest:false}));
+ s.renderOrder=5;return s;
+}
+function buildSection(t,i){
+ const T=TIERS[t],[a,b]=secAngles(i),closed=blocked(i),pos=[],real=[],zone=[],idx=[];
+ const seat=closed?TARP:SEAT.clone().multiplyScalar(i%2?1:.92),zc=closed?TARP:new THREE.Color(ZONES[zoneOf(t,i)]);
+ const quad=(p,c,z)=>{const n=pos.length/3;p.forEach(v=>{pos.push(...v);real.push(c.r,c.g,c.b);const q=z||c;zone.push(q.r,q.g,q.b)});idx.push(n,n+1,n+2,n,n+2,n+3)};
+ const strip=(r1,y1,r2,y2,c,z)=>{for(let j=0;j<SEG;j++){
+  const t1=a+(b-a)*j/SEG,t2=a+(b-a)*(j+1)/SEG,[x1,z1]=P(t1,r1),[x2,z2]=P(t2,r1),[x3,z3]=P(t2,r2),[x4,z4]=P(t1,r2);
+  quad([[x1,y1,z1],[x2,y1,z2],[x3,y2,z3],[x4,y2,z4]],c,z)}};
+ const floor=t==='lower'?0:T.h0-2.5,re=T.r0+T.rows*T.d;
+ for(let k=0;k<T.rows;k++){
+  const r=T.r0+k*T.d,h=T.h0+k*T.hs;
+  strip(r,h,r+T.d,h,seat,zc);
+  strip(r,k?h-T.hs:floor,r,h,k?CONC:WALL);
+ }
+ strip(re,floor,re,T.top,WALL);
+ if(t!=='lower')strip(T.r0,floor,re,floor,WALL);
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('color',new THREE.Float32BufferAttribute(real.slice(),3));
+ g.setIndex(idx);g.computeVertexNormals();
+ const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+ m.userData={real:new Float32Array(real),zone:new Float32Array(zone)};
+ scene.add(m);secMesh[t][i]=m;
+ if(closed)return;
+ const [lx,lz]=P((a+b)/2,T.r0+T.rows*T.d/2);
+ const s=labelSprite(String(T.base+i+1));s.scale.set(9,4.5,1);
+ s.position.set(lx,T.h0+T.rows*T.hs/2+3,lz);labelGroup.add(s);
+}
+for(const t of ORDER)for(let i=0;i<NSEC;i++)buildSection(t,i);
+function paintStands(zones){
+ for(const t in secMesh)secMesh[t].forEach(m=>{const c=m.geometry.attributes.color;c.array.set(zones?m.userData.zone:m.userData.real);c.needsUpdate=true});
+}
+
+// roof: cantilevered ring over the stands, only drawn in first-person views
+const roof=new THREE.Group();scene.add(roof);
+{const pos=[],idx=[],n=96,ring=(r1,y1,r2,y2)=>{for(let j=0;j<n;j++){
+  const t1=2*Math.PI*j/n,t2=2*Math.PI*(j+1)/n,[x1,z1]=P(t1,r1),[x2,z2]=P(t2,r1),[x3,z3]=P(t2,r2),[x4,z4]=P(t1,r2),k=pos.length/3;
+  pos.push(x1,y1,z1,x2,y1,z2,x3,y2,z3,x4,y2,z4);idx.push(k,k+1,k+2,k,k+2,k+3)}};
+ const mk=(r1,y1,r2,y2,color)=>{pos.length=idx.length=0;ring(r1,y1,r2,y2);const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx.slice());g.computeVertexNormals();
+  roof.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,side:THREE.DoubleSide})))};
+ mk(8,56,66,50,0xc9ced6);mk(6,56.4,8,56,0x3a3d44);}
+
+// ---------- crowd ----------
+// One instance per seat (~94% sold) plus a packed standing floor.
+const pX=[],pZ=[],pB=[],pV=[],pR=[],pS=[],pE=[];
+const crowdIdx={lower:[],mid:[],upper:[]};
+for(const t of ORDER){const T=TIERS[t];for(let i=0;i<NSEC;i++){
+ if(blocked(i))continue;const [a,b]=secAngles(i);crowdIdx[t][i]=[];
+ for(let row=1;row<=T.rows;row++){
+  const n=seatsIn(t,i,row),r=rowR(T,row),h=rowH(T,row);crowdIdx[t][i][row]=pX.length;
+  for(let s=1;s<=n;s++){
+   const th=a+(b-a)*(s-.5)/n,[x,z]=P(th,r),tx=-(SX+r)*Math.sin(th),tz=(SZ+r)*Math.cos(th);
+   pX.push(x);pZ.push(z);pB.push(h);pV.push(Math.random());pR.push(Math.atan2(-tz,tx));pS.push(1);pE.push(Math.random()<.06?1:0);
+  }
+ }
+}}
+const FLOOR0=pX.length;
+BLOCKS.forEach(b=>{for(let k=Math.round(b.w*b.d*1.6);k--;){
+ pX.push(b.cx+rnd(-b.w/2+.4,b.w/2-.4));pZ.push(b.cz+rnd(-b.d/2+.4,b.d/2-.4));pB.push(.03);pV.push(Math.random());pR.push(Math.PI+rnd(-.4,.4));pS.push(0);pE.push(0);
+}});
+const NP=pX.length;
+// Plain mannequin, 1 unit tall, feet at the origin, facing +z; scaled per person to their height.
+// Colour is per instance (instanceColor), so every person in the bowl gets their own outfit.
+function mannequin(sit){
+ const parts=[],Y=new THREE.Vector3(0,1,0),dy=sit?-.22:0;
+ const add=(g,m)=>{g=g.index?g.toNonIndexed():g;g.applyMatrix4(m);parts.push(g)};
+ const limb=(a,b,r1,r2)=>{const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A),l=d.length();
+  add(new THREE.CylinderGeometry(r2,r1,l,5,1,true),new THREE.Matrix4().compose(A.add(B).multiplyScalar(.5),new THREE.Quaternion().setFromUnitVectors(Y,d.normalize()),new THREE.Vector3(1,1,1)))};
+ add(new THREE.LatheGeometry([[0,.45],[.095,.5],[.08,.6],[.12,.76],[.07,.84],[.03,.87],[0,.9]].map(([x,y])=>new THREE.Vector2(x,y+dy)),6,Math.PI/6),new THREE.Matrix4().makeScale(1,1,.65));
+ add(new THREE.SphereGeometry(.062,6,4),new THREE.Matrix4().compose(new THREE.Vector3(0,.93+dy,0),new THREE.Quaternion(),new THREE.Vector3(1,1.15,1)));
+ [-1,1].forEach(s=>sit?(
+  limb([s*.055,.27,0],[s*.06,.26,.23],.05,.04),limb([s*.06,.26,.23],[s*.06,.01,.25],.038,.03),
+  limb([s*.125,.56,0],[s*.14,.36,.03],.034,.028),limb([s*.14,.36,.03],[s*.09,.29,.18],.028,.024)
+ ):(
+  limb([s*.055,.47,0],[s*.06,.02,0],.045,.032),limb([s*.125,.78,0],[s*.15,.43,0],.034,.024)
+ ));
+ const pos=[],nor=[];parts.forEach(g=>{pos.push(...g.attributes.position.array);nor.push(...g.attributes.normal.array)});
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+ return g;
+}
+const SITTING=mannequin(true),STANDING=mannequin(false),crowdMat=new THREE.MeshLambertMaterial({color:0xffffff});
+// seats and the standing floor are separate meshes so the seats can swap pose
+const seated=new THREE.InstancedMesh(SITTING,crowdMat,FLOOR0),pit=new THREE.InstancedMesh(STANDING,crowdMat,NP-FLOOR0);
+seated.frustumCulled=pit.frustumCulled=false;
+const crowd=new THREE.Group();crowd.add(seated,pit);
+let hiddenSeat=-1,hiddenFloor=[];
+const _m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_p=new THREE.Vector3(),_s=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
+function place(k){
+ const hide=pE[k]||k===hiddenSeat||hiddenFloor.includes(k);
+ _q.setFromAxisAngle(UP,pR[k]);_p.set(pX[k],pB[k],pZ[k]);
+ _s.setScalar(hide?0:1.55+.33*pV[k]);
+ _m.compose(_p,_q,_s);k<FLOOR0?seated.setMatrixAt(k,_m):pit.setMatrixAt(k-FLOOR0,_m);
+}
+const crowdDirty=()=>{seated.instanceMatrix.needsUpdate=pit.instanceMatrix.needsUpdate=true};
+function placeAll(){seated.geometry=S.sit?SITTING:STANDING;for(let k=0;k<NP;k++)place(k);crowdDirty()}
+// Outfit palette: dark neutrals dominate, colour pops are rarer, so the bowl reads like a real
+// audience instead of a block of white statues. Each person is jittered off their base colour.
+const OUTFITS=[0x14161b,0x1d2026,0x24272e,0x2f333b,0x3c414a,0x4a5058,0x5d636b,0x7b8188,0x9aa0a6,0xc9c4ba,0xe8e4db,
+ 0x22314a,0x33507a,0x4a6f96,0x5b3b46,0x8c3b4a,0xb0452f,0xbf7a33,0x7a5c3e,0x3f5c46,0x557a4a,
+ 0x476b62,0x2f6f6a,0x6b5b8a,0x9b7bb5,0xc9a227,0xd8b04a];
+const OW=OUTFITS.map((c,i)=>i<11?3:2),OWSUM=OW.reduce((a,b)=>a+b,0),_hsl={h:0,s:0,l:0};
+function outfitColor(target){
+ let r=Math.random()*OWSUM,i=0;while(i<OW.length-1&&r>OW[i]){r-=OW[i];i++}
+ target.setHex(OUTFITS[i]).getHSL(_hsl);
+ const h=(_hsl.h+(Math.random()-.5)*.045+1)%1;
+ const s=Math.max(.03,Math.min(1,_hsl.s*(.8+Math.random()*.5)));
+ const l=Math.max(.04,Math.min(.96,_hsl.l+(Math.random()-.5)*.1));
+ return target.setHSL(h,s,l);
+}
+{const c=new THREE.Color();for(let k=0;k<NP;k++){
+ outfitColor(c);
+ k<FLOOR0?seated.setColorAt(k,c):pit.setColorAt(k-FLOOR0,c)}
+ seated.instanceColor.needsUpdate=pit.instanceColor.needsUpdate=true;placeAll();scene.add(crowd);}
+// XO LED wristbands
+function sticks(n){
+ const pos=[];
+ for(let k=0;k<n;k++){const j=Math.floor(Math.random()*NP);if(pE[j])continue;pos.push(pX[j]+rnd(-.3,.3),pB[j]+rnd(1.5,2.1),pZ[j]+rnd(-.3,.3))}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ const p=new THREE.Points(g,new THREE.PointsMaterial({color:0xff2a3d,size:1,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
+ scene.add(p);return p;
+}
+const stickA=sticks(5000),stickB=sticks(5000);
+
+// pit blocks
+const pitMeshes=BLOCKS.map(b=>{
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(b.w,b.d),new THREE.MeshBasicMaterial({color:0xe8112d,transparent:true,opacity:0,depthWrite:false}));
+ m.rotation.x=-Math.PI/2;m.position.set(b.cx,.05,b.cz);scene.add(m);
+ const e=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(b.w,b.d)),new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.45}));
+ e.rotation.x=-Math.PI/2;e.position.set(b.cx,.06,b.cz);scene.add(e);
+ const s=labelSprite(b.name.slice(-1));s.scale.set(7,3.5,1);s.position.set(b.cx,5,b.cz);labelGroup.add(s);
+ return m;
+});
+
+// ---------- stage ----------
+const stage=new THREE.Group();scene.add(stage);
+const dark=new THREE.MeshLambertMaterial({color:0x17181c});
+const box=(w,h,d,x,y,z,mat=dark)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);stage.add(m);return m};
+box(64,DECK,18,0,DECK/2,STAGE_FRONT-9);
+const catLen=(BSTAGE_Z-7)-STAGE_FRONT;
+box(4,B_H,catLen,0,B_H/2,STAGE_FRONT+catLen/2);
+const bst=new THREE.Mesh(new THREE.CylinderGeometry(7,7,B_H,40),dark);bst.position.set(0,B_H/2,BSTAGE_Z);stage.add(bst);
+const edge=new THREE.MeshBasicMaterial({color:0xfff1e0});
+box(64,.12,.12,0,DECK,STAGE_FRONT,edge);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(7,.08,6,48),edge);ring.rotation.x=Math.PI/2;ring.position.set(0,B_H,BSTAGE_Z);stage.add(ring);
+// moon over the B-stage
+const moon=new THREE.Mesh(new THREE.SphereGeometry(5,32,24),new THREE.MeshBasicMaterial({color:0xe9e4d8}));moon.position.set(0,24,BSTAGE_Z);stage.add(moon);
+// skyline set
+function winTex(){
+ const c=document.createElement('canvas');c.width=64;c.height=256;const g=c.getContext('2d');
+ g.fillStyle='#000';g.fillRect(0,0,64,256);
+ for(let y=4;y<256;y+=8)for(let x=4;x<64;x+=8)if(Math.random()<.35){g.globalAlpha=rnd(.3,1);g.fillStyle=Math.random()<.85?'#ffcf86':'#ff5568';g.fillRect(x,y,4,5)}
+ return new THREE.CanvasTexture(c);
+}
+const wins=[winTex(),winTex(),winTex()];
+for(let x=-40;x<=40;x+=rnd(5.5,7.5)){
+ const w=rnd(4.5,7),h=Math.abs(x)<14?rnd(26,36):rnd(10,28),d=rnd(4,7);
+ box(w,h,d,x,h/2,STAGE_FRONT-21-rnd(0,5),new THREE.MeshLambertMaterial({color:0x1f2126,emissive:0xffffff,emissiveMap:wins[Math.floor(Math.random()*3)]}));
+}
+// LED screens
+const lc=document.createElement('canvas');lc.width=1024;lc.height=576;
+const lg=lc.getContext('2d');
+let gr=lg.createRadialGradient(512,288,10,512,288,560);gr.addColorStop(0,'#ff2a3d');gr.addColorStop(.5,'#6a0814');gr.addColorStop(1,'#0a0204');
+lg.fillStyle=gr;lg.fillRect(0,0,1024,576);
+lg.fillStyle='#fff';lg.font='900 260px Arial';lg.textAlign='center';lg.textBaseline='middle';lg.fillText('XO',512,250);
+lg.font='700 38px Arial';lg.fillText('A F T E R   H O U R S   T I L   D A W N',512,470);
+const ledTex=new THREE.CanvasTexture(lc);
+const led=new THREE.Mesh(new THREE.PlaneGeometry(24,13.5),new THREE.MeshBasicMaterial({map:ledTex}));
+led.position.set(0,15,STAGE_FRONT-17);stage.add(led);
+[-42,42].forEach(x=>{
+ const w=new THREE.Mesh(new THREE.PlaneGeometry(16,9),new THREE.MeshBasicMaterial({map:ledTex}));
+ w.position.set(x,16,STAGE_FRONT-6);w.rotation.y=x<0?.35:-.35;stage.add(w);
+ box(1.2,11.5,1.2,x,5.75,STAGE_FRONT-6.5);
+});
+// lighting rig
+box(72,1.5,1.5,0,32,STAGE_FRONT-4);
+[-36,36].forEach(x=>box(1.5,32,1.5,x,16,STAGE_FRONT-4));
+const beams=[];
+const bg=new THREE.ConeGeometry(2.6,70,18,1,true);bg.translate(0,-35,0);
+for(let i=0;i<9;i++){
+ const m=new THREE.Mesh(bg,new THREE.MeshBasicMaterial({color:i%3?0xff1530:0xffffff,transparent:true,opacity:.1,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+ m.position.set(-28+i*7,31,STAGE_FRONT-4);m.userData.ph=i*.8;scene.add(m);beams.push(m);
+}
+// performer, 1.8 m, so you can judge how big a person looks from your seat
+const performers=[];
+function performer(v){
+ const g=new THREE.Group(),m=new THREE.MeshBasicMaterial({color:0xf3efe8});
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(.22,.17,1.55,10),m);body.position.y=.78;g.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.13,12,10),m);head.position.y=1.68;g.add(head);
+ const spot=new THREE.Mesh(new THREE.ConeGeometry(1.6,30,24,1,true),new THREE.MeshBasicMaterial({color:0xfff4e0,transparent:true,opacity:.07,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+ spot.position.y=15;g.add(spot);
+ g.position.set(v.x,v.y-1.6,v.z);scene.add(g);performers.push(g);
+}
+performer(PERF_MAIN);performer(PERF_B);
+
+// ---------- marker ----------
+const marker=new THREE.Group();
+{const pin=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,10,8),new THREE.MeshBasicMaterial({color:0xff2a3d}));pin.position.y=5;marker.add(pin);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(1.3,16,12),new THREE.MeshBasicMaterial({color:0xffffff}));head.position.y=10.5;marker.add(head);
+ const s=labelSprite('YOU');s.scale.set(10,5,1);s.position.y=15;marker.add(s);scene.add(marker);}
+
+// ---------- state ----------
+const orb={az:.6,pol:1,dist:380,t:new THREE.Vector3(0,10,-10)};
+const look={yaw:0,pitch:0,pos:new THREE.Vector3()};
+const $=id=>document.getElementById(id);
+const fp=()=>S.mode==='pov'||S.mode==='stage';
+
+function seatPos(){
+ if(S.tier==='floor'){
+  const b=BLOCKS[S.sec];
+  return new THREE.Vector3(b.cx-(b.w-2)/2+(S.seat-1)/17*(b.w-2),.03,b.cz-(b.d-2)/2+(S.row-1)/9*(b.d-2));
+ }
+ const T=TIERS[S.tier],[a,b]=secAngles(S.sec),n=seatsIn(S.tier,S.sec,S.row),th=a+(b-a)*((S.seat-.5)/n);
+ const [x,z]=P(th,rowR(T,S.row));
+ return new THREE.Vector3(x,rowH(T,S.row),z);
+}
+function eyeOf(p){
+ const e=p.clone();
+ e.y+=S.sit&&S.tier!=='floor'?.45+S.height*.0042:(S.height-10)/100;
+ return e;
+}
+function aimLook(pos,tx){
+ const d=tx.clone().sub(pos);
+ look.yaw=Math.atan2(-d.x,-d.z);look.pitch=Math.atan2(d.y,Math.hypot(d.x,d.z));
+}
+// Field of view is set horizontally so portrait phones and wide monitors frame the same width.
+function applyFov(){
+ const h=fp()?2*Math.atan(Math.tan(35*Math.PI/180)/S.zoom):60*Math.PI/180;
+ camera.fov=2*Math.atan(Math.tan(h/2)/camera.aspect)*180/Math.PI;camera.updateProjectionMatrix();
+}
+
+function setMode(m){
+ S.mode=m;
+ if(m==='overview'){orb.pol=1;orb.dist=380;orb.t.set(0,10,-10)}
+ if(m==='above'){orb.pol=.02;orb.dist=420;orb.t.set(0,0,0)}
+ if(m==='pov'){look.pos.copy(eyeOf(seatPos()));aimLook(look.pos,TARGET)}
+ if(m==='stage'){look.pos.set(0,DECK+1.7,STAGE_FRONT-2);look.yaw=Math.PI;look.pitch=-.05}
+ marker.visible=!fp();roof.visible=fp();paintStands(!fp());applyShow();
+ applyFov();refreshUI();
+}
+function syncSeat(){
+ const p=seatPos();marker.position.copy(p);
+ if(S.mode==='pov'){look.pos.copy(eyeOf(p));aimLook(look.pos,TARGET)}
+ const prev=[hiddenSeat,...hiddenFloor];hiddenSeat=-1;hiddenFloor=[];
+ if(S.tier==='floor'){for(let k=FLOOR0;k<NP;k++)if(Math.hypot(pX[k]-p.x,pZ[k]-p.z)<.55)hiddenFloor.push(k)}
+ else hiddenSeat=crowdIdx[S.tier][S.sec][S.row]+S.seat-1;
+ [...prev,hiddenSeat,...hiddenFloor].forEach(k=>k>=0&&place(k));crowdDirty();
+ for(const t in secMesh)secMesh[t].forEach((m,i)=>m.material.emissive.setHex(t===S.tier&&i===S.sec?0x40101a:0));
+ pitMeshes.forEach((m,i)=>{m.material.opacity=S.tier==='floor'&&i===S.sec?.35:0});
+ refreshInfo();
+}
+function refreshInfo(){
+ let h;
+ if(S.tier==='floor'){const b=BLOCKS[S.sec];h=`<span class="chip" style="color:#fff;border-color:#fff">Standing</span><b>${b.name}</b> · row ${S.row} · spot ${S.seat}`}
+ else{const T=TIERS[S.tier],z=zoneOf(S.tier,S.sec);h=`<span class="chip" style="color:${ZONES[z]};border-color:${ZONES[z]}">Zone ${z}</span><b>Sec ${T.base+S.sec+1}</b> · row ${S.row} · seat ${S.seat}`}
+ const e=eyeOf(seatPos()),dM=e.distanceTo(PERF_MAIN),dB=e.distanceTo(PERF_B),near=Math.min(dM,dB);
+ // apparent height of a 1.8 m person, held at arm's length (~60 cm)
+ const mm=d=>Math.max(1,Math.round(600*1.8/d));
+ h+=`<div class="dist"><div><span>Main stage</span><b>${Math.round(dM)} m</b><i>performer ≈ ${mm(dM)} mm</i></div><div><span>B-stage</span><b>${Math.round(dB)} m</b><i>performer ≈ ${mm(dB)} mm</i></div></div>`;
+ h+=`<div class="v">Sizes are how tall a 1.8 m performer looks against a ruler held at arm's length.</div>`;
+ h+=`<div class="v"><b>${near<30?'Close enough to see faces and expressions.':near<60?'You can follow the performer; screens give the detail.':near<110?'The performer is a small figure; you\'ll lean on the screens.':'The performer is a speck; you\'ll mostly watch the screens.'}</b></div>`;
+ h+=`<div class="v">Eye level ${e.y.toFixed(1)} m above the floor.</div>`;
+ $('info').innerHTML=h;
+ $('rowV').textContent=S.row;$('seatV').textContent=S.seat;
+}
+function updateSeatMax(){
+ const n=S.tier==='floor'?18:seatsIn(S.tier,S.sec,S.row);
+ $('seat').max=n;S.seat=Math.min(S.seat,n);$('seat').value=S.seat;
+}
+function fillSections(){
+ const sel=$('sec');sel.innerHTML='';
+ if(S.tier==='floor'){BLOCKS.forEach((b,i)=>sel.add(new Option(b.name,i)));$('secLbl').textContent='Pit block'}
+ else{$('secLbl').textContent='Section';const T=TIERS[S.tier];
+  for(let i=0;i<NSEC;i++)if(!blocked(i))sel.add(new Option(`${T.base+i+1} · Zone ${zoneOf(S.tier,i)}`,i))}
+ if(![...sel.options].some(o=>+o.value===S.sec))S.sec=+sel.options[0].value;
+ sel.value=S.sec;
+ const max=S.tier==='floor'?10:TIERS[S.tier].rows;
+ $('row').max=max;S.row=Math.min(S.row,max);$('row').value=S.row;
+ updateSeatMax();
+}
+function refreshUI(){
+ document.querySelectorAll('#tiers button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.tier));
+ document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.mode));
+ document.querySelectorAll('#zooms button').forEach(b=>b.classList.toggle('on',+b.dataset.k===S.zoom));
+ document.querySelectorAll('#lighting button').forEach(b=>b.classList.toggle('on',b.dataset.k===S.light));
+ $('sit').classList.toggle('on',S.sit);$('stand').classList.toggle('on',!S.sit);
+ $('zooms').style.display=$('zoomNote').style.display=fp()?'':'none';
+ $('legend').style.display=fp()?'none':'';
+ $('hudMode').textContent={overview:'Overview',above:'From above',pov:'Your POV',stage:'From the stage'}[S.mode];
+}
+function setLighting(k){
+ S.light=k;const show=k==='show';
+ hemi.color.set(show?0x6f7ea8:0xdfe6f5);hemi.groundColor.set(show?0x0c0d12:0x4a4c52);hemi.intensity=show?.4:1;
+ sun.intensity=show?0:.5;
+ show?setSky('#03050a','#0b0f1a'):setSky('#0e1626','#2c3854');
+ scene.fog.color.set(show?0x0a0d16:0x1f283b);
+ refreshUI();applyShow();
+}
+// UI build
+const mkBtns=(id,list,fn)=>list.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.k=k;b.onclick=()=>fn(k,b);$(id).appendChild(b)});
+mkBtns('tiers',[['floor','Pit'],['lower','Lower'],['mid','Middle'],['upper','Upper']],k=>{S.tier=k;fillSections();syncSeat();refreshUI()});
+mkBtns('modes',[['overview','Overview'],['above','Above'],['pov','Your POV'],['stage','Stage']],setMode);
+mkBtns('zooms',[[.5,'0.5×'],[1,'1×'],[2,'2×'],[3,'3×']],k=>{S.zoom=+k;applyFov();refreshUI()});
+mkBtns('lighting',[['house','House lights'],['show','Show']],setLighting);
+mkBtns('tg',[['lights','Beams'],['sticks','Wristbands'],['crowd','Crowd'],['perf','Performer'],['labels','Numbers']],(k,b)=>{S.show[k]=!S.show[k];b.classList.toggle('on',S.show[k]);applyShow()});
+document.querySelectorAll('#tg button').forEach(b=>b.classList.add('on'));
+$('legend').innerHTML=Object.entries(ZONES).map(([z,c])=>`<span><i style="background:${c}"></i>Zone ${z}</span>`).join('');
+function applyShow(){
+ const show=S.light==='show';
+ beams.forEach(m=>m.visible=S.show.lights&&show);
+ wash.intensity=show?1.6:.6;stageLight.intensity=show&&S.show.lights?1.2:.4;bLight.intensity=show?1:.3;
+ stickA.visible=stickB.visible=S.show.sticks;crowd.visible=S.show.crowd;
+ performers.forEach(g=>g.visible=S.show.perf);
+ labelGroup.visible=S.show.labels&&!fp();
+}
+$('sec').onchange=e=>{S.sec=+e.target.value;updateSeatMax();syncSeat()};
+$('row').oninput=e=>{S.row=+e.target.value;updateSeatMax();syncSeat()};
+$('seat').oninput=e=>{S.seat=+e.target.value;syncSeat()};
+$('height').oninput=e=>{S.height=Math.min(220,Math.max(120,+e.target.value||170));syncSeat()};
+$('sit').onclick=()=>{S.sit=true;placeAll();syncSeat();refreshUI()};
+$('stand').onclick=()=>{S.sit=false;placeAll();syncSeat();refreshUI()};
+$('toggle').onclick=()=>$('panel').classList.toggle('min');
+$('go').onclick=()=>$('modal').remove();
+
+// ---------- input ----------
+const ptrs=new Map();let pinch0=0;
+const pd=()=>{const [a,b]=[...ptrs.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1};
+function zoomBy(f){
+ if(fp()){S.zoom=Math.min(4,Math.max(.5,S.zoom*f));applyFov();document.querySelectorAll('#zooms button').forEach(b=>b.classList.remove('on'))}
+ else orb.dist=Math.min(800,Math.max(40,orb.dist/f));
+}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===2)pinch0=pd()});
+cv.addEventListener('pointermove',e=>{
+ const p=ptrs.get(e.pointerId);if(!p)return;
+ const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+ if(ptrs.size===2){const d=pd();zoomBy(d/pinch0);pinch0=d;return}
+ if(fp()){const k=.004*camera.fov/50;look.yaw+=dx*k;look.pitch=Math.max(-1.2,Math.min(1.2,look.pitch+dy*k))}
+ else{orb.az-=dx*.005;orb.pol=Math.max(.02,Math.min(1.5,orb.pol-dy*.005))}
+});
+['pointerup','pointercancel'].forEach(n=>cv.addEventListener(n,e=>ptrs.delete(e.pointerId)));
+cv.addEventListener('wheel',e=>{e.preventDefault();zoomBy(e.deltaY>0?.92:1.08)},{passive:false});
+
+// ---------- loop ----------
+function resize(){renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;applyFov()}
+addEventListener('resize',resize);resize();
+const clock=new THREE.Clock();
+function frame(){
+ const t=clock.getElapsedTime();
+ beams.forEach(m=>{m.rotation.z=Math.sin(t*.9+m.userData.ph)*.5;m.rotation.x=Math.cos(t*.7+m.userData.ph)*.35;m.material.opacity=.07+.05*Math.sin(t*2+m.userData.ph)});
+ stickA.material.opacity=.55+.45*Math.sin(t*3);stickB.material.opacity=.55+.45*Math.sin(t*3+Math.PI);
+ stickA.material.size=stickB.material.size=fp()?.3:1.6;
+ if(fp()){
+  camera.position.copy(look.pos);camera.rotation.set(look.pitch,look.yaw,0);
+ }else{
+  camera.position.set(orb.t.x+orb.dist*Math.sin(orb.pol)*Math.sin(orb.az),orb.t.y+orb.dist*Math.cos(orb.pol),orb.t.z+orb.dist*Math.sin(orb.pol)*Math.cos(orb.az));
+  camera.lookAt(orb.t);
+ }
+ renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+fillSections();S.seat=Math.ceil(+$('seat').max/2);$('seat').value=S.seat;
+setLighting('house');syncSeat();setMode('overview');frame();
+})();
+</script>
+</body>
+</html>
